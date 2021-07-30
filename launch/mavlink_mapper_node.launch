@@ -1,0 +1,6 @@
+<launch>
+    <arg name="number_vehicles" default="2"/>
+    <node name="mavlink_mapper" pkg="reconfigurable_hippo" type="mavlink_mapper_node">
+        <param name="number_vehicles" value="$(arg number_vehicles)" />
+    </node>
+</launch>

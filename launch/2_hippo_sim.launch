@@ -1,0 +1,53 @@
+<launch>
+
+    <!-- vehicle names (= namespace vehicle specific nodes will be launched in) -->
+    <arg name="vehicle_1_name" default="uuv00" />
+    <arg name="vehicle_2_name" default="uuv01" />
+
+    <arg name="gui" default="true" />
+    <arg name="verbose" default="true" />
+    <arg name="rviz" default="false" />
+
+    <arg name="x" default="0.3" />
+    <arg name="y" default="0.3" />
+    <arg name="z" default="0.0" />
+    <arg name="Y" default="1.57" />
+    <arg name="P" default="0.0" />
+    <arg name="R" default="0.0" />
+    <arg name="interactive" default="true" />
+    <arg name="run_px4" default="true"/>
+
+    <!-- Gazebo spawners, PX4, Mavros -->
+    <include file="$(find hippocampus_sim)/launch/2_hippo_spawn.launch">
+        <arg name="interactive" value="$(arg interactive)" />
+        <arg name="run_px4" value="$(arg run_px4)" />
+        <arg name="vehicle_1_name" value="$(arg vehicle_1_name)" />
+        <arg name="vehicle_2_name" value="$(arg vehicle_2_name)" />
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="verbose" value="$(arg verbose)" />
+        <arg name="rviz" value="$(arg rviz)" />
+
+        <arg name="x" value="$(arg x)" />
+        <arg name="y" value="$(arg y)" />
+        <arg name="z" value="$(arg z)" />
+        <arg name="R" value="$(arg R)" />
+        <arg name="P" value="$(arg P)" />
+        <arg name="Y" value="$(arg Y)" />
+    </include>
+
+    <!-- Vehicle 1 specific nodes -->
+    <group ns="$(arg vehicle_1_name)">
+        <!-- feed ground truth as external vision into ekf2 -->
+        <include file="$(find hippocampus_sim)/launch/fake_vision.launch">
+            <arg name="topic_name" value="/ground_truth/uuv00/state" />
+        </include>
+    </group>
+
+    <!-- Vehicle 2 specific nodes -->
+    <group ns="$(arg vehicle_2_name)">
+        <!-- feed ground truth as external vision into ekf2 -->
+        <include file="$(find hippocampus_sim)/launch/fake_vision.launch">
+            <arg name="topic_name" value="/ground_truth/uuv01/state" />
+        </include>
+    </group>
+</launch>

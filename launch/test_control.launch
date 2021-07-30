@@ -1,0 +1,9 @@
+<launch>
+    <arg name="number_vehicles" default="2" />
+    <include file="$(find reconfigurable_hippo)/launch/controller_node.launch">
+        <arg name="number_vehicles" value="$(arg number_vehicles)" />
+    </include>
+    <include file="$(find reconfigurable_hippo)/launch/mavlink_mapper_node.launch">
+        <arg name="number_vehicles" value="$(arg number_vehicles)" />
+    </include>
+</launch>

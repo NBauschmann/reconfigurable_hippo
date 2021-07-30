@@ -1,0 +1,36 @@
+#!usr/bin/env python
+import threading
+import numpy as np
+
+import rospy
+from hippocampus_common.node import Node
+from std_msgs.msg import Float64MultiArray
+
+
+class ControllerNode(Node):
+    def __init__(self, name):
+        super().__init__(name=name)
+        self.data_lock = threading.RLock()
+        self.rate = rospy.Rate(50.0)
+        self.number_vehicles = self.get_param("~number_vehicles")
+        self.motor_setpoint_pub = rospy.Publisher(
+            "motor_setpoints", Float64MultiArray, queue_size=1)
+
+    def run(self):
+        while not rospy.is_shutdown():
+            u = np.zeros((self.number_vehicles*4, 1))
+            self.publish_motor_setpoints(u)
+            self.rate.sleep()
+        
+    def publish_motor_setpoints(self, u):
+        with self.data_lock:
+            msg = Float64MultiArray(data=u)
+            self.motor_setpoint_pub.publish(msg)
+
+def main():
+    node = ControllerNode("controller_mapper")
+    node.run()
+
+
+if __name__ == "__main__":
+    main()

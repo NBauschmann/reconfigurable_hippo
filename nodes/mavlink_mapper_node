@@ -1,0 +1,56 @@
+#!usr/bin/env python
+import threading
+
+import rospy
+from hippocampus_common.node import Node
+from mavros_msgs.msg import AttitudeTarget
+from std_msgs.msg import Float64MultiArray
+
+
+class MavlinkMapperNode(Node):
+    def __init__(self, name):
+        super().__init__(name=name)
+        self.data_lock = threading.RLock()
+
+        self.number_vehicles = self.get_param("~number_vehicles")
+        self.pubs = self.init_pubs()
+
+        self.full_cmd_sub = rospy.Subscriber(
+            "motor_setpoints", Float64MultiArray, self.on_full_cmd)
+
+    def init_pubs(self):
+        pubs = dict()
+        for n in range(self.number_vehicles):
+            topic_name = "uuv{:02d}/mavros/setpoint_raw/attitude".format(
+                int(n))
+            pub_name = "uuv{:02d}_setpoint".format(int(n))
+            pubs[pub_name] = rospy.Publisher(
+                topic_name, AttitudeTarget, queue_size=1)
+        return pubs
+
+    
+    def on_full_cmd(self, msg: Float64MultiArray):
+        with self.data_lock:
+            for n in range(self.number_vehicles):
+                cmd = msg.data[n*4:n*4+4]
+
+                # To take into account MAVLINK transform from frd to flu 
+                # change sign of y and z axis
+                setpoint_msg = AttitudeTarget()
+                setpoint_msg.body_rate.x = cmd[0]
+                setpoint_msg.body_rate.y = - cmd[1]
+                setpoint_msg.body_rate.z = - cmd[2]
+                setpoint_msg.thrust = cmd[3]
+                setpoint_msg.header.stamp = rospy.Time.now()
+                
+                pub_name = "uuv{:02d}_setpoint".format(int(n))
+                self.pubs[pub_name].publish(setpoint_msg)
+
+
+def main():
+    node = MavlinkMapperNode("mavlink_mapper")
+    node.run()
+
+
+if __name__ == "__main__":
+    main()

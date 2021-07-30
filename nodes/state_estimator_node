@@ -1,0 +1,62 @@
+#!usr/bin/env python
+import threading
+import numpy as np
+import rospy
+from hippocampus_common.node import Node
+from sensor_msgs.msg import JointState
+from nav_msgs.msg import Odometry
+from reconfigurable_hippo.msg import MultiHippoStates
+
+
+# TODO: parameter for joint axis? Currently assuming z-axis
+# Velocities brauchen wir auch!
+
+class StateEstimatorNode(Node):
+    def __init__(self, name):
+        super().__init__(name=name)
+        self.data_lock = threading.RLock()
+        self.number_vehicles = self.get_param("~number_vehicles")
+
+        self.uuv00_pose = None   # from /uuv00/mavros/local_position/pose OR ground truth
+        self.joint_states = np.zeros((self.number_vehicles,1))
+
+        self.state_pub = rospy.Publisher(
+            "hippo_states", MultiHippoStates, queue_size=1)
+
+        self.full_cmd_sub = rospy.Subscriber(
+            "joint_states", JointState, self.on_joint_state)
+
+
+    def init_joints(self):
+        joint_names = []
+        for n in range(self.number_vehicles - 1):
+            name = "joint_{:1d}".format(int(n + 1))
+            joint_names.append(name)
+
+    def on_pose(self, msg: Odometry):
+        with self.data_lock:
+            self.uuv00_pose = msg.pose.pose
+
+
+    def on_joint_state(self, msg: JointState):
+        with self.data_lock:
+            
+            states_msg = MultiHippoStates()
+            states_msg.pose = self.uuv00_pose
+            states_msg.header.stamp = rospy.Time.now()
+            states_msg.header.frame_id = "map"
+            
+            # assuming correct order
+            for n in range(self.number_vehicles - 1):
+                states_msg.joints[n] = msg.position[n]
+                
+            self.state_pub.publish(msg)
+
+
+def main():
+    node = StateEstimatorNode("state_estimator")
+    node.run()
+
+
+if __name__ == "__main__":
+    main()
