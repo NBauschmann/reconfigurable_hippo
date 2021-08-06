@@ -1,0 +1,6 @@
+<launch>
+    <arg name="number_vehicles" />
+    <node pkg="reconfigurable_hippo" type="state_estimator_node" name="joint_estimator" output="screen" >
+        <param name="number_vehicles" value="$(arg number_vehicles)" />
+    </node>
+</launch>

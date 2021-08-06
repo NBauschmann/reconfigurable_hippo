@@ -16,7 +16,7 @@ class MavlinkMapperNode(Node):
         self.pubs = self.init_pubs()
 
         self.full_cmd_sub = rospy.Subscriber(
-            "motor_setpoints", Float64MultiArray, self.on_full_cmd)
+            "motor_setpoints", Float64MultiArray, self.on_full_cmd, queue_size=1)
 
     def init_pubs(self):
         pubs = dict()

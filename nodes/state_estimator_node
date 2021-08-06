@@ -5,11 +5,13 @@ import rospy
 from hippocampus_common.node import Node
 from sensor_msgs.msg import JointState
 from nav_msgs.msg import Odometry
-from reconfigurable_hippo.msg import MultiHippoStates
-
+from geometry_msgs.msg import TwistStamped
+from std_msgs.msg import Float64MultiArray
 
 # TODO: parameter for joint axis? Currently assuming z-axis
-# Velocities brauchen wir auch!
+
+# states: x = []
+
 
 class StateEstimatorNode(Node):
     def __init__(self, name):
@@ -17,39 +19,61 @@ class StateEstimatorNode(Node):
         self.data_lock = threading.RLock()
         self.number_vehicles = self.get_param("~number_vehicles")
 
-        self.uuv00_pose = None   # from /uuv00/mavros/local_position/pose OR ground truth
-        self.joint_states = np.zeros((self.number_vehicles,1))
+        self.uuv00_pose = None
+        self.uuv00_twist = None
+        self.joint_states = np.zeros(((self.number_vehicles - 1) * 2, 1))
 
-        self.state_pub = rospy.Publisher(
-            "hippo_states", MultiHippoStates, queue_size=1)
+        self.state_pub = rospy.Publisher("hippo_states",
+                                         Float64MultiArray,
+                                         queue_size=1)
 
-        self.full_cmd_sub = rospy.Subscriber(
-            "joint_states", JointState, self.on_joint_state)
+        self.joint_sub = rospy.Subscriber("joint_states",
+                                          JointState,
+                                          self.on_joint_state,
+                                          queue_size=1)
+        self.uuv00_pose_sub = rospy.Subscriber("/uuv00/ground_truth/state",
+                                               Odometry,
+                                               self.on_pose,
+                                               queue_size=1)
+        self.uuv00_twist_sub = rospy.Subscriber(
+            "/uuv00/ground_truth/twist_body_frame",
+            TwistStamped,
+            self.on_twist,
+            queue_size=1)
 
-
-    def init_joints(self):
-        joint_names = []
-        for n in range(self.number_vehicles - 1):
-            name = "joint_{:1d}".format(int(n + 1))
-            joint_names.append(name)
-
-    def on_pose(self, msg: Odometry):
+    def on_pose(self, odom_msg: Odometry):
         with self.data_lock:
-            self.uuv00_pose = msg.pose.pose
+            self.uuv00_pose = np.array([
+                odom_msg.pose.pose.position.x, odom_msg.pose.pose.position.y,
+                odom_msg.pose.pose.position.z, odom_msg.pose.pose.orientation.w,
+                odom_msg.pose.pose.orientation.x,
+                odom_msg.pose.pose.orientation.y,
+                odom_msg.pose.pose.orientation.z
+            ]).reshape(-1, 1)
 
-
-    def on_joint_state(self, msg: JointState):
+    def on_twist(self, twist_msg: TwistStamped):
         with self.data_lock:
+            self.uuv00_twist = np.array([
+                twist_msg.twist.linear.x, twist_msg.twist.linear.y,
+                twist_msg.twist.linear.z, twist_msg.twist.angular.x,
+                twist_msg.twist.angular.y, twist_msg.twist.angular.z
+            ]).reshape(-1, 1)
+
+    def on_joint_state(self, joint_msg: JointState):
+        with self.data_lock:
+
+            for i in range(len(joint_msg.position)):
+                # assuming correct order of joints
+                self.joint_states[(i * 2, 0)] = joint_msg.position[i]
+                self.joint_states[(i * 2 + 1, 0)] = joint_msg.velocity[i]
+
+            state_vector = np.concatenate(
+                (self.uuv00_pose, self.uuv00_twist, self.joint_states), axis=0)
             
-            states_msg = MultiHippoStates()
-            states_msg.pose = self.uuv00_pose
-            states_msg.header.stamp = rospy.Time.now()
-            states_msg.header.frame_id = "map"
-            
-            # assuming correct order
-            for n in range(self.number_vehicles - 1):
-                states_msg.joints[n] = msg.position[n]
-                
+            msg = Float64MultiArray()
+
+            msg.data = state_vector
+
             self.state_pub.publish(msg)
 
 

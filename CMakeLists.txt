@@ -44,11 +44,9 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  JointState.msg
-  MultiHippoStates.msg
-)
+# add_message_files(
+#   FILES
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -64,11 +62,11 @@ add_message_files(
 #   Action2.action
 # )
 
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-)
+# generate_messages(
+#   DEPENDENCIES
+#   std_msgs
+#   geometry_msgs
+# )
 
 
 ################################################
@@ -122,5 +120,6 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/controller_node
   nodes/mavlink_mapper_node
+  nodes/state_estimator_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
