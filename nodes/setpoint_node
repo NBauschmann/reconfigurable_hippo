@@ -13,7 +13,6 @@ class SetpointNode(Node):
         super().__init__(name=name)
         self.number_vehicles = self.get_param("~number_vehicles")
         self.number_joints = self.number_vehicles - 1
-        self.pubs = self.init_pubs()
         self.setpoint_pub = rospy.Publisher("state_setpoints",
                                             Float64MultiArray,
                                             queue_size=1)
@@ -22,22 +21,24 @@ class SetpointNode(Node):
 
         while not rospy.is_shutdown():
 
-            self.pos_des = np.array([2, 1, 0]).reshape(-1,1)
-            self.quat_des = np.array([1, 0, 0, 0]).reshape(-1,1)
-            self.vel_des = np.zeros(6,1)
+            self.pos_des = np.array([2, 1, 0]).reshape(-1, 1)
+            self.quat_des = np.array([1, 0, 0, 0]).reshape(-1, 1)
+            self.vel_des = np.zeros((6, 1))
 
-            # joint states: 
-            self.joint_state_des = np.zeros(self.number_joints*2,1)
+            # joint states:
+            self.joint_state_des = np.zeros((self.number_joints * 2, 1))
 
             if self.number_vehicles == 2:
-                self.joint_state_des = np.radians([45, 0, 45, 0]).reshape(-1,1)
+                self.joint_state_des = np.radians([45, 0, 45, 0]).reshape(-1, 1)
                 print(self.joint_state_des)
-            
+
             msg = Float64MultiArray()
-            msg.data = np.concatenate(self.pos_des, self.quat_des, self.vel_des, self.joint_state_des)
+            msg.data = np.concatenate((self.pos_des, self.quat_des, self.vel_des,
+                                      self.joint_state_des))
             self.setpoint_pub.publish(msg)
 
             rospy.Rate(30.0).sleep()
+
 
 def main():
     node = SetpointNode("state_setpoint_node")

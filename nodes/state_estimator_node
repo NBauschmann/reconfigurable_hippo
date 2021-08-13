@@ -1,4 +1,5 @@
 #!usr/bin/env python
+from logging import NOTSET
 import threading
 import numpy as np
 import rospy
@@ -23,7 +24,7 @@ class StateEstimatorNode(Node):
         self.uuv00_twist = None
         self.joint_states = np.zeros(((self.number_vehicles - 1) * 2, 1))
 
-        self.state_pub = rospy.Publisher("hippo_states",
+        self.state_pub = rospy.Publisher("multi_hippo/state",
                                          Float64MultiArray,
                                          queue_size=1)
 
@@ -67,14 +68,16 @@ class StateEstimatorNode(Node):
                 self.joint_states[(i * 2, 0)] = joint_msg.position[i]
                 self.joint_states[(i * 2 + 1, 0)] = joint_msg.velocity[i]
 
-            state_vector = np.concatenate(
-                (self.uuv00_pose, self.uuv00_twist, self.joint_states), axis=0)
-            
-            msg = Float64MultiArray()
 
-            msg.data = state_vector
+            if not self.uuv00_pose is None and not self.uuv00_twist is None:
+                state_vector = np.concatenate(
+                    (self.uuv00_pose, self.uuv00_twist, self.joint_states), axis=0)
+                
+                msg = Float64MultiArray()
 
-            self.state_pub.publish(msg)
+                msg.data = state_vector
+
+                self.state_pub.publish(msg)
 
 
 def main():

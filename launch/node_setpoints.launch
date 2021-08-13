@@ -1,0 +1,6 @@
+<launch>
+    <arg name="number_vehicles" />
+    <node pkg="reconfigurable_hippo" type="setpoint_node" name="state_setpoint_node" output="screen" >
+        <param name="number_vehicles" value="$(arg number_vehicles)" />
+    </node>
+</launch>

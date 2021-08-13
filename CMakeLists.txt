@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   hippocampus_common
   hippocampus_msgs
   mavros_msgs
+  dynamic_reconfigure
 )
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -83,11 +84,10 @@ catkin_python_setup()
 ##   * uncomment the "generate_dynamic_reconfigure_options" section below
 ##     and list every .cfg file to be processed
 
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
+# Generate dynamic reconfigure parameters in the 'cfg' folder
+generate_dynamic_reconfigure_options(
+  cfg/SlidingModeController.cfg
+)
 
 ###################################
 ## catkin specific configuration ##
@@ -121,5 +121,7 @@ catkin_install_python(PROGRAMS
   nodes/controller_node
   nodes/mavlink_mapper_node
   nodes/state_estimator_node
+  nodes/setpoint_node
+  nodes/tracking_control_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

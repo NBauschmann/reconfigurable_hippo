@@ -3,9 +3,7 @@
     <!-- vehicle names (= namespace vehicle specific nodes will be launched in) -->
     <arg name="vehicle_1_name" default="uuv00" />
     <arg name="vehicle_2_name" default="uuv01" />
-    <arg name="vehicle_3_name" default="uuv02" />
     <arg name="vehicle_type" default="hippocampus" />
-    <arg name="number_vehicles" default="3" />
 
     <arg name="gui" default="true" />
     <arg name="verbose" default="true" />
@@ -21,12 +19,11 @@
     <arg name="run_px4" default="true"/>
 
     <!-- Gazebo spawners, PX4, Mavros -->
-    <include file="$(find hippocampus_sim)/launch/3_hippo_spawn.launch">
+    <include file="$(find hippocampus_sim)/launch/2_hippo_spawn.launch">
         <arg name="interactive" value="$(arg interactive)" />
         <arg name="run_px4" value="$(arg run_px4)" />
         <arg name="vehicle_1_name" value="$(arg vehicle_1_name)" />
         <arg name="vehicle_2_name" value="$(arg vehicle_2_name)" />
-        <arg name="vehicle_3_name" value="$(arg vehicle_3_name)" />
         <arg name="gui" value="$(arg gui)" />
         <arg name="verbose" value="$(arg verbose)" />
         <arg name="rviz" value="$(arg rviz)" />
@@ -46,7 +43,8 @@
         <!-- feed ground truth as external vision into ekf2 -->
         <include file="$(find hippocampus_sim)/launch/fake_vision.launch">
         </include>
-        <include file="$(find hippocampus_common)/launch/tf_publisher.launch" pass_all_args="true">
+        <include file="$(find hippocampus_common)/launch/node_tf_publisher.launch" pass_all_args="true">
+            <remap from="ground_truth/state" to="/ground_truth/$(arg vehicle_1_name)/state" />
         </include>
     </group>
 
@@ -57,20 +55,11 @@
         <!-- feed ground truth as external vision into ekf2 -->
         <include file="$(find hippocampus_sim)/launch/fake_vision.launch">
         </include>
-        <include file="$(find hippocampus_common)/launch/tf_publisher.launch" pass_all_args="true">
+        <include file="$(find hippocampus_common)/launch/node_tf_publisher.launch" pass_all_args="true">
         </include>
     </group>
 
-    <!-- Vehicle 3 specific nodes -->
-    <group ns="$(arg vehicle_3_name)">
-        <param name="vehicle_name" value="$(arg vehicle_3_name)" />
-        <param name="vehicle_type" value="$(arg vehicle_type)" />
-        <!-- feed ground truth as external vision into ekf2 -->
-        <include file="$(find hippocampus_sim)/launch/fake_vision.launch">
-        </include>
-        <include file="$(find hippocampus_common)/launch/tf_publisher.launch" pass_all_args="true">
-        </include>
-    </group>
 
-    <include file="$(find reconfigurable_hippo)/launch/estimator_node.launch" pass_all_args="true"/>
+    <include file="$(find reconfigurable_hippo)/launch/node_state_estimator.launch" pass_all_args="true"/>
+
 </launch>

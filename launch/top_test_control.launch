@@ -1,0 +1,16 @@
+<launch>
+
+    <include file="$(find reconfigurable_hippo)/launch/top_3_hippo_sim.launch" />
+
+    <arg name="number_vehicles" default="3" />
+    <!-- <include file="$(find reconfigurable_hippo)/launch/node_controller.launch">
+        <arg name="number_vehicles" value="$(arg number_vehicles)" />
+    </include> -->
+    <include file="$(find reconfigurable_hippo)/launch/node_mavlink_mapper.launch">
+        <arg name="number_vehicles" value="$(arg number_vehicles)" />
+    </include>
+    <include file="$(find reconfigurable_hippo)/launch/node_setpoints.launch">
+        <arg name="number_vehicles" value="$(arg number_vehicles)" />
+    </include>
+    
+</launch>
