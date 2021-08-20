@@ -28,13 +28,16 @@ class SetpointNode(Node):
             # joint states:
             self.joint_state_des = np.zeros((self.number_joints * 2, 1))
 
-            if self.number_vehicles == 2:
+            if self.number_joints == 1:
+                self.joint_state_des = np.radians([45, 0]).reshape(-1, 1)
+                # print(self.joint_state_des)
+
+            if self.number_joints == 2:
                 self.joint_state_des = np.radians([45, 0, 45, 0]).reshape(-1, 1)
-                print(self.joint_state_des)
 
             msg = Float64MultiArray()
-            msg.data = np.concatenate((self.pos_des, self.quat_des, self.vel_des,
-                                      self.joint_state_des))
+            msg.data = np.concatenate((self.pos_des, self.quat_des,
+                                       self.vel_des, self.joint_state_des))
             self.setpoint_pub.publish(msg)
 
             rospy.Rate(30.0).sleep()

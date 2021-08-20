@@ -1,6 +1,6 @@
 <launch>
     <arg name="number_vehicles" default="3" />
-    <node name="tracking_controller" pkg="reconfigurable_hippo" type="tracking_control_node">
+    <node name="tracking_controller" pkg="reconfigurable_hippo" type="tracking_control_node" output="screen">
         <param name="number_vehicles" value="$(arg number_vehicles)" />
     </node>
 </launch>
