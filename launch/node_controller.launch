@@ -1,6 +1,0 @@
-<launch>
-    <arg name="number_vehicles" default="2" />
-    <node name="controller" pkg="reconfigurable_hippo" type="controller_node">
-        <param name="number_vehicles" value="$(arg number_vehicles)" />
-    </node>
-</launch>

@@ -123,5 +123,6 @@ catkin_install_python(PROGRAMS
   nodes/state_estimator_node
   nodes/setpoint_node
   nodes/tracking_control_node
+  nodes/arm_vehicles
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

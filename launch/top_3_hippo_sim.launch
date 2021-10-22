@@ -73,4 +73,5 @@
     </group>
 
     <include file="$(find reconfigurable_hippo)/launch/node_state_estimator.launch" pass_all_args="true"/>
+
 </launch>

@@ -21,7 +21,7 @@ class SetpointNode(Node):
 
         while not rospy.is_shutdown():
 
-            self.pos_des = np.array([2, 1, 0]).reshape(-1, 1)
+            self.pos_des = np.array([2, 0.3, -0.5]).reshape(-1, 1)
             self.quat_des = np.array([1, 0, 0, 0]).reshape(-1, 1)
             self.vel_des = np.zeros((6, 1))
 
@@ -29,11 +29,11 @@ class SetpointNode(Node):
             self.joint_state_des = np.zeros((self.number_joints * 2, 1))
 
             if self.number_joints == 1:
-                self.joint_state_des = np.radians([45, 0]).reshape(-1, 1)
+                self.joint_state_des = np.radians([0, 0]).reshape(-1, 1)
                 # print(self.joint_state_des)
 
             if self.number_joints == 2:
-                self.joint_state_des = np.radians([45, 0, 45, 0]).reshape(-1, 1)
+                self.joint_state_des = np.radians([0, 0, 0, 0]).reshape(-1, 1)
 
             msg = Float64MultiArray()
             msg.data = np.concatenate((self.pos_des, self.quat_des,
