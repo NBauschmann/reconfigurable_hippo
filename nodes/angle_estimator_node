@@ -1,0 +1,195 @@
+#!/usr/bin/env python
+from xmlrpc.client import Server
+import rospy
+import numpy as np
+import threading
+
+from hippocampus_common.node import Node
+from reconfigurable_hippo.ekf import ExtendedKalmanFilter
+from hippocampus_msgs.msg import JointAngleEKFStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, \
+    Vector3Stamped
+from std_msgs.msg import Float32
+
+from dynamic_reconfigure.server import Server
+from reconfigurable_hippo.cfg import EKFConfig
+
+
+class AngleEstimatorNode(Node):
+
+    def __init__(self):
+        super(AngleEstimatorNode, self).__init__("angle_estimator_node")
+        self.lock = threading.Lock()
+        self.t_last_prediction = rospy.get_time()
+
+        self.uuv02_rpy = None
+        self.uuv03_rpy = None
+        self.uuv02_position = None
+        self.uuv03_position = None
+
+        angle_var = float(rospy.get_param('~angle_var'))
+        angle_velocity_var = float(rospy.get_param('~angle_velocity_var'))
+        dist_meas_var = float(rospy.get_param('~dist_meas_var'))
+        yaw_meas_var = float(rospy.get_param('~yaw_meas_var'))
+        joint_length = float(rospy.get_param('~joint_length'))
+
+        x_0 = np.array([0.0, 0.0]).reshape((-1, 1))
+        p_mat_0 = np.array(np.diag([0.1, 0.1]))
+        v = np.array(np.diag([angle_var, angle_velocity_var]))
+
+        w_dist = np.array([dist_meas_var]).reshape((-1, 1))
+        w_yaw = np.array([yaw_meas_var]).reshape((-1, 1))
+
+        # initialize EKF
+        self.ekf = ExtendedKalmanFilter(x_0, p_mat_0, v, w_dist, w_yaw,
+                                        joint_length)
+
+        self.angle_pub = rospy.Publisher("/joint_angle",
+                                         JointAngleEKFStamped,
+                                         queue_size=1)
+        self.angle_diff_pub = rospy.Publisher("/joint_angle_computed",
+                                              Float32,
+                                              queue_size=1)
+
+        # using raw vision data?
+        self.using_vision = False
+
+        # using distance measurements?
+        self.using_dist_meas = True
+        # using yaw measurements in EKF?
+        self.using_yaw_diff_meas = True
+        
+        self.dyn_server = Server(EKFConfig, self.on_ekf_reconfigure)
+
+        # for now, simply subtracting angles
+        if self.using_vision:
+            rospy.Subscriber("/uuv02/rpy_vision",
+                             Vector3Stamped,
+                             self.on_uuv02_rpy,
+                             queue_size=1)
+            rospy.Subscriber("/uuv03/rpy_vision",
+                             Vector3Stamped,
+                             self.on_uuv03_rpy,
+                             queue_size=1)
+            rospy.Subscriber("/uuv02/mavros/vision_pose/pose_cov",
+                             PoseWithCovarianceStamped,
+                             self.on_uuv02_pose,
+                             queue_size=1)
+            rospy.Subscriber("/uuv03/mavros/vision_pose/pose_cov",
+                             PoseWithCovarianceStamped,
+                             self.on_uuv03_pose,
+                             queue_size=1)
+        else:  # using ekf2 data
+            rospy.Subscriber("/uuv02/rpy_pose_px4",
+                             Vector3Stamped,
+                             self.on_uuv02_rpy,
+                             queue_size=1)
+            rospy.Subscriber("/uuv03/rpy_pose_px4",
+                             Vector3Stamped,
+                             self.on_uuv03_rpy,
+                             queue_size=1)
+            rospy.Subscriber("/uuv02/mavros/local_position/pose",
+                             PoseStamped,
+                             self.on_uuv02_pose,
+                             queue_size=1)
+            rospy.Subscriber("/uuv03/mavros/local_position/pose",
+                             PoseStamped,
+                             self.on_uuv03_pose,
+                             queue_size=1)
+
+    def on_ekf_reconfigure(self, config, level):
+        with self.lock:
+            self.using_dist_meas = config["using_dist_meas"]
+            self.using_yaw_diff_meas = config["using_yaw_meas"]
+        return config
+
+    def on_uuv02_pose(self, msg):
+        with self.lock:
+            if self.using_vision:
+                position = msg.pose.pose.position
+            else:
+                position = msg.pose.position
+            self.uuv02_position = np.array([position.x, position.y,
+                                            position.z]).reshape((-1, 1))
+
+            if self.uuv03_position is not None and self.using_dist_meas:
+                z_dist = np.linalg.norm(
+                    np.copy(self.uuv03_position) - np.copy(self.uuv02_position))
+                self.ekf.update_dist_data(z_dist)
+
+    def on_uuv03_pose(self, msg):
+        with self.lock:
+            if self.using_vision:
+                position = msg.pose.pose.position
+            else:
+                position = msg.pose.position
+            self.uuv03_position = np.array([position.x, position.y,
+                                            position.z]).reshape((-1, 1))
+
+    def on_uuv02_rpy(self, msg):
+        with self.lock:
+            self.uuv02_rpy = np.array(
+                [msg.vector.x, msg.vector.y, msg.vector.z])
+
+            if self.uuv03_rpy is not None and self.using_yaw_diff_meas:
+                z_yaw = np.copy(self.uuv03_rpy)[2] - np.copy(self.uuv02_rpy[2])
+                self.ekf.update_yaw_data(z_yaw)
+
+    def on_uuv03_rpy(self, msg):
+        with self.lock:
+            self.uuv03_rpy = np.array(
+                [msg.vector.x, msg.vector.y, msg.vector.z])
+
+    def publish_angle_estimation(self):
+        with self.lock:
+            state = self.ekf.get_x_est()
+            cov = self.ekf.get_p_mat()
+
+        msg = JointAngleEKFStamped()
+        msg.header.stamp = rospy.Time.now()
+        msg.angle = state[0, 0]
+        msg.angle_vel = state[1, 0]
+        msg.angle_covariance = cov[0, 0]
+        msg.vel_covariance = cov[1, 1]
+
+        self.angle_pub.publish(msg)
+
+    def publish_angle_diff(self):
+        if self.uuv02_rpy is not None and self.uuv03_rpy is not None:
+            with self.lock:
+                angle = self.uuv03_rpy[2] - self.uuv02_rpy[2]
+                # wrap angle between -pi and pi  # todo: check this
+                angle = np.arctan2(np.sin(angle), np.cos(angle))
+
+            msg = Float32()
+            msg.data = angle
+            self.angle_diff_pub.publish(msg)
+
+    def predict_and_publish_estimation(self):
+        # predicting and publishing with constant rate
+        now = rospy.get_time()
+        with self.lock:
+            # prediction step of EKF
+            self.ekf.predict(now - self.t_last_prediction)
+            self.t_last_prediction = now
+
+        # publish states
+        self.publish_angle_estimation()
+
+    def run(self):
+        rate = rospy.Rate(30.0)
+        while not rospy.is_shutdown():
+            self.predict_and_publish_estimation()
+            # also publish raw yaw angle difference
+            self.publish_angle_diff()
+            rate.sleep()
+        rospy.loginfo("[{}] Shutting down...".format(rospy.get_name()))
+
+
+def main():
+    node = AngleEstimatorNode()
+    node.run()
+
+
+if __name__ == '__main__':
+    main()

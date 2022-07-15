@@ -1,0 +1,6 @@
+# variance
+angle_var: 0.01
+angle_velocity_var: 0.01
+dist_meas_var: 0.01
+yaw_meas_var: 0.01
+joint_length: 0.29 # Unit of standard deviation: m

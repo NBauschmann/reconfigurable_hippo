@@ -87,6 +87,7 @@ catkin_python_setup()
 # Generate dynamic reconfigure parameters in the 'cfg' folder
 generate_dynamic_reconfigure_options(
   cfg/SlidingModeController.cfg
+  cfg/EKF.cfg
 )
 
 ###################################
@@ -120,9 +121,10 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/controller_node
   nodes/mavlink_mapper_node
-  nodes/state_estimator_node
+  nodes/state_estimator_sim_node
   nodes/setpoint_node
   nodes/tracking_control_node
-  nodes/arm_vehicles
+  nodes/angle_estimator_node
+  nodes/tf_joint_helper_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

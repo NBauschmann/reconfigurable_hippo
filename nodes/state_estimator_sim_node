@@ -68,11 +68,9 @@ class StateEstimatorNode(Node):
                 self.joint_states[(i * 2, 0)] = joint_msg.position[i]
                 self.joint_states[(i * 2 + 1, 0)] = joint_msg.velocity[i]
 
-
-            if not self.uuv00_pose is None and not self.uuv00_twist is None:
+            if self.uuv00_pose is not None and self.uuv00_twist is not None:
                 state_vector = np.concatenate(
                     (self.uuv00_pose, self.uuv00_twist, self.joint_states), axis=0)
-                
                 msg = Float64MultiArray()
 
                 msg.data = state_vector

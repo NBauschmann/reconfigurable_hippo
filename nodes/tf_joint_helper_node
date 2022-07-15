@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+import rospy
+import numpy as np
+import threading
+
+import tf.transformations
+import tf2_ros
+
+from hippocampus_common.node import Node
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+
+
+class TfJointHelperNode(Node):
+
+    def __init__(self) -> None:
+        super(TfJointHelperNode, self).__init__("tf_joint_helper_node")
+
+        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(10))
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
+
+        self.uuv02_frame_id = "uuv02/base_link"
+        self.uuv03_frame_id = "uuv03/base_link"
+
+        # # using raw vision data?
+        # self.using_vision = True
+        #
+        # if self.using_vision:
+        #     rospy.Subscriber("/uuv02/mavros/vision_pose/pose_cov",
+        #                      PoseWithCovarianceStamped,
+        #                      self.on_uuv02_pose,
+        #                      queue_size=1)
+        #     rospy.Subscriber("/uuv03/mavros/vision_pose/pose_cov",
+        #                      PoseWithCovarianceStamped,
+        #                      self.on_uuv03_pose,
+        #                      queue_size=1)
+        # else:
+        #     rospy.Subscriber("/uuv02/local_position/pose",
+        #                      PoseStamped,
+        #                      self.on_uuv03_pose,
+        #                      queue_size=1)
+        #     rospy.Subscriber("/uuv03/local_position/pose",
+        #                      PoseStamped,
+        #                      self.on_uuv03_pose,
+        #                      queue_size=1)
+
+    # def on_uuv02_pose(self, msg):
+    #     pass
+
+    # def on_uuv03_pose(self, msg):
+    #     pass
+
+    def broadcast_joint_tf(self):
+        if self.tf_buffer.can_transform(target_frame=self.uuv03_frame_id,
+                                        source_frame=self.uuv02_frame_id,
+                                        time=rospy.Time()):
+            transform = self.tf_buffer.lookup_transform(
+                target_frame=self.uuv03_frame_id,
+                source_frame=self.uuv02_frame_id,
+                time=rospy.Time(),
+                timeout=rospy.Duration(10))
+            
+            self.tf_broadcaster.sendTransform(transform)
+        else:
+            rospy.logfatal(
+                "[{}] Transform from uuv02 to uuv03 not found.".format(
+                    rospy.get_name()))
+
+
+    def run(self):
+        rate = rospy.Rate(30.0)
+        while not rospy.is_shutdown():
+            self.broadcast_joint_tf()
+            rate.sleep()
+        rospy.loginfo("[{}] Shutting down...".format(rospy.get_name()))
+
+
+def main():
+    node = TfJointHelperNode()
+    node.run()
+
+
+if __name__ == "__main__":
+    main()
