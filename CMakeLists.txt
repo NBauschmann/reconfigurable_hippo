@@ -126,5 +126,6 @@ catkin_install_python(PROGRAMS
   nodes/tracking_control_node
   nodes/angle_estimator_node
   nodes/tf_joint_helper_node
+  nodes/deg_to_rad_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

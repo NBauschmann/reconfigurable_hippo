@@ -1,0 +1,38 @@
+import rospy
+import numpy as np
+
+from hippocampus_common.node import Node
+from std_msgs.msg import Float32
+
+
+class DegToRadNode(Node):
+
+    def __init__(self) -> None:
+        super(DegToRadNode, self).__init__("degree_to_rad_node")
+
+        self.pub = rospy.Publisher("/joint_angle_ground_truth_rad",
+                                   Float32,
+                                   queue_size=1)
+        rospy.Subscriber("/joint_angle_ground_truth",
+                         Float32,
+                         self.on_joint_angle,
+                         queue_size=1)
+
+    def on_joint_angle(self, msg):
+        msg_rad = Float32()
+        msg_rad.data = np.radians(msg.data)
+        self.pub.publish(msg_rad)
+
+    def run(self):
+        while not rospy.is_shutdown():
+            rospy.spin()
+        rospy.loginfo("[{}] Shutting down...".format(rospy.get_name()))
+
+
+def main():
+    node = DegToRadNode()
+    node.run()
+
+
+if __name__ == '__main__':
+    main()

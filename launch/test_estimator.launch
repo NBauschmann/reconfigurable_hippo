@@ -1,0 +1,6 @@
+<launch>
+
+    <include file="$(find reconfigurable_hippo)/launch/node_angle_estimator.launch" />
+    <node name="deg_to_rad_node" pkg="reconfigurable_hippo" type="deg_to_rad_node" output="screen" />
+
+</launch>

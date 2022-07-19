@@ -1,0 +1,18 @@
+<launch>
+    <group ns="uuv02">  
+        <arg name="vehicle_name" value="uuv02" />
+        <arg name="vehicle_type" value="hippocampus"/>
+        <param name="vehicle_name" value="uuv02"/>
+        <param name="vehicle_type" value="hippocampus" />
+        <include file="$(find hippocampus_common)/launch/node_tf_publisher.launch" pass_all_args="true" />
+    </group>
+
+    <group ns="uuv03">  
+        <arg name="vehicle_name" value="uuv03" />
+        <arg name="vehicle_type" value="hippocampus"/>
+        <param name="vehicle_name" value="uuv03"/>
+        <param name="vehicle_type" value="hippocampus" />
+        <include file="$(find hippocampus_common)/launch/node_tf_publisher.launch" pass_all_args="true" />
+    </group>
+    
+</launch>
